@@ -51,6 +51,9 @@ class Parser {
                     return parseMethodOrVariableDeclaration();
                 case "if":
                     return parseIfStatement();
+                case "else": // Добавляем обработку ключевого слова "else"
+                    advanceToken();
+                    return parseStatement(); // Рекурсивно вызываем parseStatement для разбора ветки else
                 case "class":
                     return parseClassDeclaration();
                 default:
@@ -117,12 +120,30 @@ class Parser {
             advanceToken();
             token = getCurrentToken();
             if (token.type == TokenType.SEPARATOR && token.value.equals("{")) {
-                int vlSep = 0;
+                System.out.println("Opening brace found for method body");
                 advanceToken();
-                while (getCurrentToken() != null && !getCurrentToken().value.equals("}") && vlSep==0) {
-                    method.addBodyStatement(parseStatement());
+                int openingBraces = 1;
+                while (getCurrentToken() != null) {
+                    token = getCurrentToken();
+                    if (token.type == TokenType.SEPARATOR) {
+                        if (token.value.equals("{")) {
+                            System.out.println("Opening brace found");
+                            openingBraces++;
+                        } else if (token.value.equals("}")) {
+                            System.out.println("Closing brace found");
+                            openingBraces--;
+                            if (openingBraces == 0) {
+                                advanceToken();
+                                break; // Exit loop when closing brace is found
+                            }
+                        }
+                    }
+                    ASTNode statement = parseStatement();
+                    if (statement != null) {
+                        System.out.println("Adding statement: " + statement+" "+token.value);
+                        method.addBodyStatement(statement);
+                    }
                 }
-                advanceToken();
                 return method;
             } else {
                 throw new RuntimeException("Expected '{' but found " + token);
@@ -131,6 +152,7 @@ class Parser {
             throw new RuntimeException("Expected '(' but found " + token);
         }
     }
+
 
     private ASTNode parseMethodOrVariableDeclaration() {
         StringBuilder typeBuilder = new StringBuilder();
@@ -179,13 +201,12 @@ class Parser {
         if (token.type == TokenType.SEPARATOR && token.value.equals(";")) {
             advanceToken();
             return new VariableDeclaration(type, name);
-        }
-        else {
+        } else {
             if (token.type == TokenType.OPERATOR && token.value.equals("=")) {
                 advanceToken();
                 String value = "";
-                while (!(token = getCurrentToken()).value.equals(";")){
-                    value+=token.value;
+                while (!(token = getCurrentToken()).value.equals(";")) {
+                    value += token.value;
                     advanceToken();
                 }
                 return new VariableDeclaration(type, name, value);
@@ -204,10 +225,13 @@ class Parser {
                 advanceToken();
                 ASTNode thenBranch = parseStatement();
                 ASTNode elseBranch = null;
-                //TODO: Fix elseBranch
                 if (getCurrentToken() != null && getCurrentToken().type == TokenType.KEYWORD && getCurrentToken().value.equals("else")) {
                     advanceToken();
-                    elseBranch = parseStatement();
+                    if (getCurrentToken().type == TokenType.SEPARATOR && getCurrentToken().value.equals("{")) {
+                        elseBranch = parseBlockStatement();
+                    } else {
+                        elseBranch = parseStatement();
+                    }
                 }
                 return new IfStatement(condition, thenBranch, elseBranch);
             } else {
@@ -218,6 +242,31 @@ class Parser {
         }
     }
 
+    private ASTNode parseBlockStatement() {
+        int openingBraces = 0;
+        Program program = new Program();
+        while (getCurrentToken() != null) {
+            Token token = getCurrentToken();
+            if (token.type == TokenType.SEPARATOR) {
+                if (token.value.equals("{")) {
+                    openingBraces++;
+                } else if (token.value.equals("}")) {
+                    openingBraces--;
+                    if (openingBraces == 0) {
+                        advanceToken();
+                        break; // Exit loop when closing brace is found
+                    }
+                }
+            }
+            ASTNode statement = parseStatement();
+            program.addStatement(statement);
+        }
+        return program;
+    }
+
+
+
+
     private ClassDeclaration parseClassDeclaration() {
         advanceToken();
         Token token = getCurrentToken();
@@ -226,17 +275,36 @@ class Parser {
             advanceToken();
 
             ClassDeclaration classDecl = new ClassDeclaration(className);
+            int openingBraces = 0;
 
             token = getCurrentToken();
             if (token.type == TokenType.SEPARATOR && token.value.equals("{")) {
+                System.out.println("Opening brace found");
+                openingBraces++;
                 advanceToken();
-                while (getCurrentToken() != null && !getCurrentToken().value.equals("}")) {
+
+                while (getCurrentToken() != null) {
+                    token = getCurrentToken();
+                    if (token.type == TokenType.SEPARATOR) {
+                        if (token.value.equals("{")) {
+                            System.out.println("Opening brace found");
+                            openingBraces++;
+                        } else if (token.value.equals("}")) {
+                            System.out.println("Closing brace found");
+                            openingBraces--;
+                            if (openingBraces == 0) {
+                                advanceToken();
+                                break; // Exit loop when closing brace is found
+                            }
+                        }
+                    }
                     ASTNode member = parseStatement();
                     if (member != null) {
+                        System.out.println("Adding member: " + member);
                         classDecl.addMember(member);
                     }
                 }
-                advanceToken();
+
                 return classDecl;
             } else {
                 throw new RuntimeException("Expected '{' but found " + token);
@@ -245,6 +313,8 @@ class Parser {
             throw new RuntimeException("Expected class name but found " + token);
         }
     }
+
+
 
     private Expression parseExpression() {
         StringBuilder expr = new StringBuilder();
@@ -278,6 +348,4 @@ class Parser {
             visitor.visit(this);
         }
     }
-
 }
-
