@@ -3,7 +3,7 @@ import java.util.*;
 
 public class LexicalSyntacticAnalyzer {
     public static void main(String[] args) {
-        String inputFile = PathToFile;
+        String inputFile = "C:\\Users\\Егор\\IdeaProjects\\test\\src\\Test.java";
 
         try {
             List<Token> tokens = LexicalAnalyzer.tokenize(inputFile);
