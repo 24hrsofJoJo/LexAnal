@@ -41,6 +41,15 @@ class VariableDeclaration extends ASTNode {
     void accept(ASTVisitor visitor) {
         visitor.visit(this);
     }
+
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public String toString(){
+        return "Type: "+type+", name: "+name+", value: "+value;
+    }
 }
 
 //class MethodDeclaration extends ASTNode {
@@ -76,6 +85,7 @@ class MethodDeclaration extends ASTNode {
     String name;
     List<VariableDeclaration> parameters;
     List<ASTNode> body;
+    ASTNode returnVariable = null;
 
     MethodDeclaration(String modifier, String returnType, String name) {
         this.modifier = modifier;
@@ -83,6 +93,14 @@ class MethodDeclaration extends ASTNode {
         this.name = name;
         this.parameters = new ArrayList<>();
         this.body = new ArrayList<>();
+    }
+
+    public void setParameters(List<VariableDeclaration> parameters) {
+        this.parameters = parameters;
+    }
+
+    public void setBody(List<ASTNode> body) {
+        this.body = body;
     }
 
     MethodDeclaration(String returnType, String methodName) {
@@ -101,6 +119,14 @@ class MethodDeclaration extends ASTNode {
     @Override
     void accept(ASTVisitor visitor) {
         visitor.visit(this);
+    }
+
+    public void setReturnVariable(String name) {
+        for (ASTNode i: body){
+            if (((VariableDeclaration)i).getName().equals(name)){
+                this.returnVariable = i;
+            }
+        }
     }
 }
 
@@ -124,12 +150,27 @@ class ClassDeclaration extends ASTNode {
     }
 }
 
+class WhileLoop extends ASTNode {
+    Expression expr;
+    ArrayList<ASTNode> body = null;
+
+    @Override
+    void accept(ASTVisitor visitor){
+        visitor.visit(this);
+    }
+
+    public WhileLoop(Expression expr, ArrayList<ASTNode> body) {
+        this.expr = expr;
+        this.body = body;
+    }
+}
+
 class IfStatement extends ASTNode {
     ASTNode condition;
-    ASTNode thenBranch;
-    ASTNode elseBranch;
+    ArrayList<ASTNode> thenBranch = new ArrayList<>();
+    ArrayList<ASTNode> elseBranch = new ArrayList<>();
 
-    IfStatement(ASTNode condition, ASTNode thenBranch, ASTNode elseBranch) {
+    IfStatement(ASTNode condition, ArrayList<ASTNode> thenBranch, ArrayList<ASTNode> elseBranch) {
         this.condition = condition;
         this.thenBranch = thenBranch;
         this.elseBranch = elseBranch;
@@ -142,14 +183,55 @@ class IfStatement extends ASTNode {
 }
 
 class LoopDeclaration extends ASTNode {
-    ASTNode startValue;
-    ASTNode condition;
-    ASTNode expr;
-    ASTNode body;
+    int startValue;
+    VariableDeclaration iterator;
+    Expression condition;
+    Expression expr;
+    ArrayList<ASTNode> body;
     @Override
     void accept(ASTVisitor visitor){
         visitor.visit(this);
     }
+
+    public LoopDeclaration(VariableDeclaration iterator, Expression condition, Expression expr, ArrayList<ASTNode> body) {
+        this.iterator = iterator;
+        this.condition = condition;
+        this.expr = expr;
+        this.body = body;
+    }
+
+    public VariableDeclaration getIterator() {
+        return iterator;
+    }
+
+    public int getStartValue() {
+        return startValue;
+    }
+
+    public void setStartValue(int startValue) {
+        this.startValue = startValue;
+    }
+
+    public Expression getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Expression condition) {
+        this.condition = condition;
+    }
+
+    public Expression getExpr() {
+        return expr;
+    }
+
+    public void setExpr(Expression expr) {
+        this.expr = expr;
+    }
+
+    public ArrayList<ASTNode> getBody() {
+        return body;
+    }
+
 }
 
 class Expression extends ASTNode {
@@ -174,4 +256,5 @@ interface ASTVisitor {
     void visit(Expression expression);
     void visit(Parser.ArrayDeclaration arrayDeclaration);
     void visit(LoopDeclaration loopDeclaration);
+    void visit(WhileLoop whileLoop);
 }

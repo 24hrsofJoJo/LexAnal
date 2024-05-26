@@ -29,7 +29,7 @@ public class LexicalAnalyzer {
             "for", "implements", "import", "instanceof", "int", "interface", "long",
             "native", "new", "package", "private", "protected", "public", "return", "short", "static",
             "super", "switch", "synchronized", "this", "throw", "throws", "transient", "try",
-            "void", "volatile", "while", "true", "false", "null"
+            "void", "volatile", "while", "true", "false", "null", "if"
     ));
 
     private static final Set<String> OPERATORS = new HashSet<>(Arrays.asList(

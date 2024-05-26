@@ -1,4 +1,12 @@
-import java.util.*;
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by FernFlower decompiler)
+//
+
+import java.io.EOFException;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 
 class Parser {
     private List<Token> tokens;
@@ -9,36 +17,32 @@ class Parser {
     }
 
     private Token getCurrentToken() {
-        if (currentTokenIndex < tokens.size()) {
-            return tokens.get(currentTokenIndex);
-        }
-        return null;
+        return this.currentTokenIndex < this.tokens.size() ? (Token)this.tokens.get(this.currentTokenIndex) : null;
     }
 
     private void advanceToken() {
-        currentTokenIndex++;
+        ++this.currentTokenIndex;
     }
 
     public Program parse() {
         Program program = new Program();
-        while (getCurrentToken() != null) {
-            program.addStatement(parseStatement());
+
+        while(this.getCurrentToken() != null) {
+            program.addStatement(this.parseStatement());
         }
+
         return program;
     }
 
     private ASTNode parseStatement() {
-
-        //TODO: static fields parsing
-        //TODO: for loops parsing
-        //TODO: volatile, final, ... parsing
-
-        Token token = getCurrentToken();
+        Token token = this.getCurrentToken();
         if (token.type == TokenType.KEYWORD) {
             switch (token.value) {
                 case "public":
-                    advanceToken();
-                    return parsePublicDeclaration();
+                case "protected":
+                case "private":
+                    this.advanceToken();
+                    return this.parsePublicDeclaration();
                 case "int":
                 case "boolean":
                 case "char":
@@ -48,304 +52,440 @@ class Parser {
                 case "short":
                 case "byte":
                 case "void":
-                    return parseMethodOrVariableDeclaration();
+                    return this.parseMethodOrVariableDeclaration();
+                case "for":
+                    return this.parseForLoopDeclaration();
                 case "if":
-                    return parseIfStatement();
-                case "else": // Добавляем обработку ключевого слова "else"
-                    advanceToken();
-                    return parseStatement(); // Рекурсивно вызываем parseStatement для разбора ветки else
+                    return this.parseIfStatement();
+                case "else":
+                    this.advanceToken();
+                    return this.parseStatement();
+                case "while":
+                    return this.parseWhileLoopDeclaration();
                 case "class":
-                    return parseClassDeclaration();
+                    return this.parseClassDeclaration();
                 default:
                     throw new RuntimeException("Unexpected keyword: " + token.value);
             }
         } else if (token.type == TokenType.IDENTIFIER) {
-            return parseExpression();
+            return this.parseExpression();
         } else {
-            advanceToken();
-            return null; // Return null if no matching statement found
+            this.advanceToken();
+            return null;
         }
     }
 
     private ASTNode parsePublicDeclaration() {
-        Token nextToken = getCurrentToken();
-        if (nextToken != null && nextToken.value.equals("class")) {
-            return parseClassDeclaration();
-        } else if (nextToken != null && nextToken.value.equals("static")) {
-            return parseStaticMethodDeclaration();
-        } else {
-            throw new RuntimeException("Expected 'class' or 'static' but found " + nextToken);
+        Token nextToken = this.getCurrentToken();
+        if (nextToken != null && nextToken.value.equals("class"))
+            return this.parseClassDeclaration();
+
+        else
+            if (nextToken != null && nextToken.value.equals("static")) {
+                try {
+                    return this.parseStaticMethodDeclaration();
+                }
+                catch (EOFException e){
+                    String[] temp = e.getMessage().split("//");
+                    return this.parseVariableDeclaration(temp[1],temp[0]);
+                }
+            }
+            else
+                if(nextToken != null && nextToken.type == TokenType.KEYWORD) {
+                    return this.parseMethodOrVariableDeclaration();
+                }
+                else {
+                    throw new RuntimeException("Expected 'class' or 'static' but found " + String.valueOf(nextToken));
+                }
+    }
+
+    private MethodDeclaration parseStaticMethodDeclaration() throws EOFException{
+        this.advanceToken();
+        try {
+            return this.parseMethodDeclaration("static");
+        }
+        catch (EOFException e){
+            throw e;
         }
     }
 
-    private MethodDeclaration parseStaticMethodDeclaration() {
-        advanceToken();
-        return parseMethodDeclaration("static");
-    }
-
-    private MethodDeclaration parseMethodDeclaration(String modifier) {
-        String returnType = getCurrentToken().value;
-        advanceToken();
-        String methodName = getCurrentToken().value;
-        advanceToken();
-        Token token = getCurrentToken();
+    private MethodDeclaration parseMethodDeclaration(String modifier) throws EOFException{
+        String returnType = this.getCurrentToken().value;
+        this.advanceToken();
+        String methodName = this.getCurrentToken().value;
+        this.advanceToken();
+        Token token = this.getCurrentToken();
         if (token.type == TokenType.SEPARATOR && token.value.equals("(")) {
-            advanceToken();
+            this.advanceToken();
             MethodDeclaration method = new MethodDeclaration(modifier, returnType, methodName);
-            while (getCurrentToken() != null && !getCurrentToken().value.equals(")")) {
-                String paramType = getCurrentToken().value;
-                advanceToken();
+
+            while(this.getCurrentToken() != null && !this.getCurrentToken().value.equals(")")) {
+                String paramType = this.getCurrentToken().value;
+                this.advanceToken();
+
                 try {
-                    if (getCurrentToken().value.equals("[")) {
-                        advanceToken();
-                        if (getCurrentToken().value.equals("]"))
-                            paramType += "[]";
-                        else if (Integer.valueOf(getCurrentToken().value) instanceof Integer) {
-                            paramType+=getCurrentToken().value+"]";
-                            advanceToken();
+                    if (this.getCurrentToken().value.equals("[")) {
+                        this.advanceToken();
+                        if (this.getCurrentToken().value.equals("]")) {
+                            paramType = paramType + "[]";
+                        } else if (Integer.valueOf(this.getCurrentToken().value) instanceof Integer) {
+                            paramType = paramType + this.getCurrentToken().value + "]";
+                            this.advanceToken();
                         }
+                        this.advanceToken();
                     }
+                } catch (Exception var8) {
+                    throw new RuntimeException("Expected ] or size, but found " + this.getCurrentToken().value);
                 }
-                catch (Exception e){
-                    throw new RuntimeException("Expected ] or size, but found "+getCurrentToken().value);
-                }
-                advanceToken();
-                String paramName = getCurrentToken().value;
-                advanceToken();
+
+                String paramName = this.getCurrentToken().value;
+                this.advanceToken();
                 method.addParameter(new VariableDeclaration(paramType, paramName));
-                if (getCurrentToken().value.equals(",")) {
-                    advanceToken();
+                if (this.getCurrentToken().value.equals(",")) {
+                    this.advanceToken();
                 }
             }
-            advanceToken();
-            token = getCurrentToken();
+
+            this.advanceToken();
+            token = this.getCurrentToken();
             if (token.type == TokenType.SEPARATOR && token.value.equals("{")) {
-                System.out.println("Opening brace found for method body");
-                advanceToken();
+//                System.out.println("Opening brace found for method body");
+                this.advanceToken();
                 int openingBraces = 1;
-                while (getCurrentToken() != null) {
-                    token = getCurrentToken();
+
+                while(this.getCurrentToken() != null) {
+                    token = this.getCurrentToken();
                     if (token.type == TokenType.SEPARATOR) {
                         if (token.value.equals("{")) {
-                            System.out.println("Opening brace found");
-                            openingBraces++;
+//                            System.out.println("Opening brace found");
+                            ++openingBraces;
                         } else if (token.value.equals("}")) {
-                            System.out.println("Closing brace found");
-                            openingBraces--;
+//                            System.out.println("Closing brace found");
+                            --openingBraces;
                             if (openingBraces == 0) {
-                                advanceToken();
-                                break; // Exit loop when closing brace is found
+                                this.advanceToken();
+                                break;
                             }
                         }
                     }
-                    ASTNode statement = parseStatement();
-                    if (statement != null) {
-                        System.out.println("Adding statement: " + statement+" "+token.value);
-                        method.addBodyStatement(statement);
+
+
+                    if (token.value.equals("return") && !method.returnType.equals("void")) {
+                        this.advanceToken();
+                        token = this.getCurrentToken();
+                        method.setReturnVariable(token.value);
+                        this.advanceToken();
+                    }
+                    else {
+                        if (token.value.equals("return")) {
+//                        method.addBodyStatement();
+                        }
+                        else {
+                            ASTNode statement = this.parseStatement();
+                            if (statement != null) {
+                                method.addBodyStatement(statement);
+                            }
+                        }
                     }
                 }
+
                 return method;
             } else {
-                throw new RuntimeException("Expected '{' but found " + token);
+                if (token.value.equals(";")){
+                    throw new EOFException(methodName+"//"+returnType);
+                }
+                throw new RuntimeException("Expected '{' but found " + String.valueOf(token));
             }
         } else {
-            throw new RuntimeException("Expected '(' but found " + token);
+            if (token.value.equals(";")){
+                throw new EOFException(methodName+"//"+returnType);
+            }
+            throw new RuntimeException("Expected '(' but found " + String.valueOf(token));
         }
     }
 
+    private LoopDeclaration parseForLoopDeclaration(){
+        this.advanceToken();
+        Token token = this.getCurrentToken();
+        if(token.type==TokenType.SEPARATOR && token.value.equals("(")){
+            this.advanceToken();
+            token = this.getCurrentToken();
+            if (token.type==TokenType.KEYWORD){
+                String type = token.value;
+                this.advanceToken();
+                token = this.getCurrentToken();
+                this.advanceToken();
+                VariableDeclaration iterator = parseVariableDeclaration(type,token.value);
+                if (!this.getCurrentToken().value.equals(";"))
+                    throw new RuntimeException("Expected ; but found "+this.getCurrentToken().toString());
+                this.advanceToken();
+                Expression condition = parseExpression();
+                if (!this.getCurrentToken().value.equals(";"))
+                    throw new RuntimeException("Expected ; but found "+this.getCurrentToken().toString());
+                this.advanceToken();
+                Expression expr = parseExpression();
+                this.advanceToken();
+                ArrayList<ASTNode> body = new ArrayList<>();
+                if (this.getCurrentToken().value.equals("{")) {
+                    body.add(this.parseBlockStatement());
+                    if(!(this.getCurrentToken().type==TokenType.SEPARATOR&this.getCurrentToken().value.equals("}"))){
+                        throw new RuntimeException("Expected } but found "+this.getCurrentToken().toString());
+                    }
+                }
+                else{
+                    body.add(this.parseExpression());
+                }
+                this.advanceToken();
+                return new LoopDeclaration(iterator,condition,expr,body);
 
+            }
+            else{
+                return null;
+            }
+
+        }
+        else {
+            throw new RuntimeException("Expected '(' but found " + String.valueOf(token));
+        }
+    }
+
+    private ASTNode parseWhileLoopDeclaration(){
+        this.advanceToken();
+        Token token = this.getCurrentToken();
+        if(token.type==TokenType.SEPARATOR && token.value.equals("(")) {
+            this.advanceToken();
+            Expression expr = this.parseExpression();
+            token = this.getCurrentToken();
+            if (token.value.equals(")")) {
+                this.advanceToken();
+                if (this.getCurrentToken().value.equals("{")) {
+                    ArrayList<ASTNode> body = new ArrayList<>();
+                    body.add(this.parseBlockStatement());
+                    System.out.println();
+                    return new WhileLoop(expr, body);
+                }
+                else{
+                    ArrayList<ASTNode> body = new ArrayList<>();
+                    body.add(this.parseExpression());
+                    return new WhileLoop(expr,body);
+                }
+            }
+            else
+                throw new RuntimeException("Expected ), but found "+token.toString());
+        }
+        else{
+            throw new RuntimeException("Expected ( but found "+token.toString());
+        }
+    }
     private ASTNode parseMethodOrVariableDeclaration() {
         StringBuilder typeBuilder = new StringBuilder();
-        while (getCurrentToken().type == TokenType.KEYWORD) {
-            typeBuilder.append(getCurrentToken().value).append(" ");
-            advanceToken();
+
+        while(this.getCurrentToken().type == TokenType.KEYWORD) {
+            typeBuilder.append(this.getCurrentToken().value).append(" ");
+            this.advanceToken();
         }
+
         String type = typeBuilder.toString().trim();
-
-        Token token = getCurrentToken();
-        if (token.type == TokenType.IDENTIFIER) {
+        Token token = this.getCurrentToken();
+        if (token.type != TokenType.IDENTIFIER) {
+            throw new RuntimeException("Ожидался идентификатор, но найдено " + String.valueOf(token));
+        } else {
             String name = token.value;
-            advanceToken();
-
-            if (getCurrentToken() != null && getCurrentToken().type == TokenType.SEPARATOR && getCurrentToken().value.equals("[")) {
-
-                advanceToken();
-                if (getCurrentToken() != null && getCurrentToken().type == TokenType.SEPARATOR && getCurrentToken().value.equals("]")) {
-                    advanceToken();
-                    token = getCurrentToken();
+            this.advanceToken();
+            if (this.getCurrentToken() != null && this.getCurrentToken().type == TokenType.SEPARATOR && this.getCurrentToken().value.equals("[")) {
+                this.advanceToken();
+                if (this.getCurrentToken() != null && this.getCurrentToken().type == TokenType.SEPARATOR && this.getCurrentToken().value.equals("]")) {
+                    this.advanceToken();
+                    token = this.getCurrentToken();
                     if (token != null && (token.type == TokenType.IDENTIFIER || token.value.equals("("))) {
                         if (token.value.equals("(")) {
-                            advanceToken();
-                            if (getCurrentToken() != null && getCurrentToken().value.equals(")")) {
-                                advanceToken();
+                            this.advanceToken();
+                            if (this.getCurrentToken() != null && this.getCurrentToken().value.equals(")")) {
+                                this.advanceToken();
                                 return new MethodDeclaration(type, name);
                             }
                         }
+
                         return new MethodDeclaration(type, name, token.value);
                     } else {
                         throw new RuntimeException("Ожидалось имя переменной или начало списка аргументов метода после ']'");
                     }
                 } else {
-                    throw new RuntimeException("Ожидалось ']', но найдено " + getCurrentToken());
+                    throw new RuntimeException("Ожидалось ']', но найдено " + String.valueOf(this.getCurrentToken()));
                 }
             } else {
-                return parseVariableDeclaration(type, name);
+                return this.parseVariableDeclaration(type, name);
             }
-        } else {
-            throw new RuntimeException("Ожидался идентификатор, но найдено " + token);
         }
     }
 
     private VariableDeclaration parseVariableDeclaration(String type, String name) {
-        Token token = getCurrentToken();
+        Token token = this.getCurrentToken();
         if (token.type == TokenType.SEPARATOR && token.value.equals(";")) {
-            advanceToken();
+            this.advanceToken();
             return new VariableDeclaration(type, name);
-        } else {
-            if (token.type == TokenType.OPERATOR && token.value.equals("=")) {
-                advanceToken();
-                String value = "";
-                while (!(token = getCurrentToken()).value.equals(";")) {
-                    value += token.value;
-                    advanceToken();
-                }
-                return new VariableDeclaration(type, name, value);
-            } else {
-                throw new RuntimeException("Expected ';' but found " + token);
+        } else if (token.type == TokenType.OPERATOR && token.value.equals("=")) {
+            this.advanceToken();
+            String value = "";
+
+            while(!(token = this.getCurrentToken()).value.equals(";")) {
+                value = value + token.value;
+                this.advanceToken();
             }
+
+            return new VariableDeclaration(type, name, value);
+        } else {
+            throw new RuntimeException("Expected ';' but found " + String.valueOf(token));
         }
     }
 
     private IfStatement parseIfStatement() {
-        advanceToken();
-        if (getCurrentToken().type == TokenType.SEPARATOR && getCurrentToken().value.equals("(")) {
-            advanceToken();
-            ASTNode condition = parseExpression();
-            if (getCurrentToken().type == TokenType.SEPARATOR && getCurrentToken().value.equals(")")) {
-                advanceToken();
-                ASTNode thenBranch = parseStatement();
-                ASTNode elseBranch = null;
-                if (getCurrentToken() != null && getCurrentToken().type == TokenType.KEYWORD && getCurrentToken().value.equals("else")) {
-                    advanceToken();
-                    if (getCurrentToken().type == TokenType.SEPARATOR && getCurrentToken().value.equals("{")) {
-                        elseBranch = parseBlockStatement();
+         this.advanceToken();
+
+        if (this.getCurrentToken().type == TokenType.SEPARATOR && this.getCurrentToken().value.equals("(")) {
+            this.advanceToken();
+            ASTNode condition = this.parseExpression();
+            ArrayList<ASTNode> thenBranch = new ArrayList<>();
+            if (this.getCurrentToken().type == TokenType.SEPARATOR && this.getCurrentToken().value.equals(")")) {
+                this.advanceToken();
+                if (this.getCurrentToken().value.equals("{")) {
+                    while (!this.getCurrentToken().value.equals("else")) {
+                        this.advanceToken();
+                        if (this.getCurrentToken().value.equals("}")) {
+                            this.advanceToken();
+                            break;
+                        }
+                        thenBranch.add(this.parseStatement());
+                    }
+                    //thenBranch.add(this.parseBlockStatement());
+                }
+                ArrayList<ASTNode> elseBranch = null;
+//                this.advanceToken();
+                if (this.getCurrentToken() != null && this.getCurrentToken().type == TokenType.KEYWORD && this.getCurrentToken().value.equals("else")) {
+                    this.advanceToken();
+                    if (this.getCurrentToken().type == TokenType.SEPARATOR && this.getCurrentToken().value.equals("{")) {
+                        elseBranch = new ArrayList<>();
+                        elseBranch.add(this.parseBlockStatement());
                     } else {
-                        elseBranch = parseStatement();
+                        elseBranch = new ArrayList<>();
+                        elseBranch.add(this.parseStatement());
                     }
                 }
+
                 return new IfStatement(condition, thenBranch, elseBranch);
             } else {
-                throw new RuntimeException("Expected ')' but found " + getCurrentToken());
+                throw new RuntimeException("Expected ')' but found " + String.valueOf(this.getCurrentToken()));
             }
         } else {
-            throw new RuntimeException("Expected '(' but found " + getCurrentToken());
+            throw new RuntimeException("Expected '(' but found " + String.valueOf(this.getCurrentToken()));
         }
     }
 
     private ASTNode parseBlockStatement() {
         int openingBraces = 0;
         Program program = new Program();
-        while (getCurrentToken() != null) {
-            Token token = getCurrentToken();
+
+        while(this.getCurrentToken() != null) {
+            Token token = this.getCurrentToken();
             if (token.type == TokenType.SEPARATOR) {
                 if (token.value.equals("{")) {
-                    openingBraces++;
+                    ++openingBraces;
                 } else if (token.value.equals("}")) {
-                    openingBraces--;
+                    --openingBraces;
                     if (openingBraces == 0) {
-                        advanceToken();
-                        break; // Exit loop when closing brace is found
+                        break;
                     }
                 }
             }
-            ASTNode statement = parseStatement();
-            program.addStatement(statement);
+
+            ASTNode statement = this.parseStatement();
+            if (statement!=null)
+                program.addStatement(statement);
         }
+
         return program;
     }
 
-
-
-
     private ClassDeclaration parseClassDeclaration() {
-        advanceToken();
-        Token token = getCurrentToken();
-        if (token.type == TokenType.IDENTIFIER) {
+        this.advanceToken();
+        Token token = this.getCurrentToken();
+        if (token.type != TokenType.IDENTIFIER) {
+            throw new RuntimeException("Expected class name but found " + String.valueOf(token));
+        } else {
             String className = token.value;
-            advanceToken();
-
+            this.advanceToken();
             ClassDeclaration classDecl = new ClassDeclaration(className);
             int openingBraces = 0;
-
-            token = getCurrentToken();
+            token = this.getCurrentToken();
             if (token.type == TokenType.SEPARATOR && token.value.equals("{")) {
-                System.out.println("Opening brace found");
-                openingBraces++;
-                advanceToken();
+//                System.out.println("Opening brace found");
+                ++openingBraces;
+                this.advanceToken();
 
-                while (getCurrentToken() != null) {
-                    token = getCurrentToken();
+                while(this.getCurrentToken() != null) {
+                    token = this.getCurrentToken();
                     if (token.type == TokenType.SEPARATOR) {
                         if (token.value.equals("{")) {
-                            System.out.println("Opening brace found");
-                            openingBraces++;
+//                            System.out.println("Opening brace found");
+                            ++openingBraces;
                         } else if (token.value.equals("}")) {
-                            System.out.println("Closing brace found");
-                            openingBraces--;
+//                            System.out.println("Closing brace found");
+                            --openingBraces;
                             if (openingBraces == 0) {
-                                advanceToken();
-                                break; // Exit loop when closing brace is found
+                                this.advanceToken();
+                                break;
                             }
                         }
                     }
-                    ASTNode member = parseStatement();
+
+                    ASTNode member = this.parseStatement();
                     if (member != null) {
-                        System.out.println("Adding member: " + member);
+//                        System.out.println("Adding member: " + String.valueOf(member));
                         classDecl.addMember(member);
                     }
                 }
 
                 return classDecl;
             } else {
-                throw new RuntimeException("Expected '{' but found " + token);
+                throw new RuntimeException("Expected '{' but found " + String.valueOf(token));
             }
-        } else {
-            throw new RuntimeException("Expected class name but found " + token);
         }
     }
-
-
 
     private Expression parseExpression() {
         StringBuilder expr = new StringBuilder();
-        while (getCurrentToken() != null && getCurrentToken().type != TokenType.SEPARATOR) {
-            expr.append(getCurrentToken().value).append(" ");
-            advanceToken();
+
+        while(this.getCurrentToken() != null && this.getCurrentToken().type != TokenType.SEPARATOR) {
+            expr.append(this.getCurrentToken().value).append(" ");
+            this.advanceToken();
         }
+
         return new Expression(expr.toString().trim());
     }
-
     class ArrayDeclaration extends ASTNode {
         private String type;
         private String name;
         private String arrayName;
         private List<Expression> values;
 
+        ArrayDeclaration(Parser this$0) {
+        }
+
         List<Expression> getValues() {
-            return values;
+            return this.values;
         }
 
         String getName() {
-            return name;
+            return this.name;
         }
 
         String getType() {
-            return type;
+            return this.type;
         }
 
-        @Override
         void accept(ASTVisitor visitor) {
             visitor.visit(this);
         }
     }
+
 }

@@ -4,7 +4,8 @@ public class ASTPrinter implements ASTVisitor {
     @Override
     public void visit(Program program) {
         for (ASTNode statement : program.statements) {
-            statement.accept(this);
+            if (statement!=null)
+                statement.accept(this);
         }
     }
 
@@ -18,19 +19,33 @@ public class ASTPrinter implements ASTVisitor {
     }
 
     @Override
-    public void visit(LoopDeclaration loopDeclaration){
+    public void visit(WhileLoop whileLoop){
+        System.out.println("While loop, expression: "+whileLoop.expr.expression);
+        System.out.println("NOW BODY");
+        for (ASTNode i: whileLoop.body)
+            i.accept(this);
+        System.out.println("WHILE BODY END");
+    }
 
+    @Override
+    public void visit(LoopDeclaration loopDeclaration){
+        System.out.println("Loop for, iterator: "+loopDeclaration.getIterator().toString()+", condition: "+loopDeclaration.getCondition().expression+", expression: "+loopDeclaration.getExpr().expression);
+        System.out.println("Loop body start");
+        for (ASTNode i: loopDeclaration.getBody()){
+            i.accept(this);
+        }
+        System.out.println("Loop body end");
     }
 
 
     @Override
     public void visit(MethodDeclaration methodDeclaration) {
         System.out.println("MethodDeclaration: returnType=" + methodDeclaration.returnType + ", name=" + methodDeclaration.name);
-        System.out.println("NOW METHODS");
+        System.out.println("NOW ARGUMENTS");
         for (VariableDeclaration param : methodDeclaration.parameters) {
             param.accept(this);
         }
-        System.out.println("METHODS ENDED");
+        System.out.println("ARGUMENTS ENDED");
         System.out.println("BODY");
         for (ASTNode statement : methodDeclaration.body) {
             if (statement!=null)
@@ -38,6 +53,8 @@ public class ASTPrinter implements ASTVisitor {
             else
                 break;
         }
+        if (methodDeclaration.returnVariable!=null)
+            System.out.println("RETURNING "+((VariableDeclaration)methodDeclaration.returnVariable).toString());
         System.out.println("BODY ENDED");
     }
 
@@ -54,11 +71,17 @@ public class ASTPrinter implements ASTVisitor {
         System.out.println("IfStatement: ");
         System.out.print("Condition: ");
         ifStatement.condition.accept(this);
-        System.out.print("Then: ");
-        ifStatement.thenBranch.accept(this);
+        System.out.println("Start of then branch: ");
+        for (ASTNode i: ifStatement.thenBranch) {
+            if (i!=null)
+                i.accept(this);
+        }
+        System.out.println("End of then branch");
         if (ifStatement.elseBranch != null) {
-            System.out.print("Else: ");
-            ifStatement.elseBranch.accept(this);
+            System.out.println("Start of else branch: ");
+            for (ASTNode i: ifStatement.elseBranch)
+                i.accept(this);
+            System.out.println("End of else branch");
         }
     }
 
