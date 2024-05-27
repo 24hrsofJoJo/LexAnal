@@ -29,7 +29,7 @@ public class LexicalAnalyzer {
             "for", "implements", "import", "instanceof", "int", "interface", "long",
             "native", "new", "package", "private", "protected", "public", "return", "short", "static",
             "super", "switch", "synchronized", "this", "throw", "throws", "transient", "try",
-            "void", "volatile", "while", "true", "false", "null", "if"
+            "void", "volatile", "while", "true", "false", "null", "if", "."
     ));
 
     private static final Set<String> OPERATORS = new HashSet<>(Arrays.asList(
@@ -55,7 +55,7 @@ public class LexicalAnalyzer {
     }
 
     private static void tokenizeLine(String line, int lineNumber, List<Token> tokens) {
-        StringTokenizer tokenizer = new StringTokenizer(line, " \t\n\r\f(){}[]=;,+-*/%&|!<>?^:~\"'", true);
+        StringTokenizer tokenizer = new StringTokenizer(line, " \t\n\r\f(){}[]=.;,+-*/%&|!<>?^:~\"'", true);
         boolean inString = false;
         StringBuilder stringLiteral = new StringBuilder();
 

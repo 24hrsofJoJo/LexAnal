@@ -21,6 +21,26 @@ class Program extends ASTNode {
     }
 }
 
+class MethodOrFieldCall extends ASTNode{
+    boolean isMethod;
+    ArrayList<String> call;
+    ArrayList<String> args;
+
+    @Override
+    void accept(ASTVisitor visitor){
+        visitor.visit(this);
+    }
+
+    public MethodOrFieldCall(boolean isMethod, ArrayList<String> call, ArrayList<String> args) {
+        this.isMethod = isMethod;
+        this.call = call;
+        if (isMethod)
+            this.args = args;
+        else
+            this.args = null;
+    }
+}
+
 class VariableDeclaration extends ASTNode {
     String type;
     String name;
@@ -257,4 +277,5 @@ interface ASTVisitor {
     void visit(Parser.ArrayDeclaration arrayDeclaration);
     void visit(LoopDeclaration loopDeclaration);
     void visit(WhileLoop whileLoop);
+    void visit(MethodOrFieldCall methodOrFieldCall);
 }

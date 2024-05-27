@@ -9,15 +9,19 @@ public class LexicalSyntacticAnalyzer {
             List<Token> tokens = LexicalAnalyzer.tokenize(inputFile);
             Parser parser = new Parser(tokens);
             Program program = parser.parse();
-            System.out.println("Parsing completed successfully. AST:");
+            System.out.println("Parsing completed successfully.");
+
+            SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
+            program.accept(semanticAnalyzer);
+            System.out.println("Semantic analysis completed successfully. AST:");
+
+
 
             // Print AST
             program.accept(new ASTPrinter());
 
             // Perform semantic analysis
-            SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
-            program.accept(semanticAnalyzer);
-            System.out.println("Semantic analysis completed successfully.");
+
 
         } catch (IOException e) {
             e.printStackTrace();

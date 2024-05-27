@@ -37,6 +37,28 @@ public class ASTPrinter implements ASTVisitor {
         System.out.println("Loop body end");
     }
 
+    @Override
+    public void visit(MethodOrFieldCall methodOrFieldCall){
+        String toPrint;
+        if (methodOrFieldCall.isMethod){
+            toPrint = "Method call: ";
+            toPrint+=String.join(".",methodOrFieldCall.call);
+            toPrint+="()";
+            if (methodOrFieldCall.args.size()!=0){
+                toPrint+=" with args: ";
+                toPrint+=String.join(".",methodOrFieldCall.args);
+            }
+            else{
+                toPrint+=" with no args";
+            }
+        }
+        else{
+            toPrint = "Field call: ";
+            toPrint+=String.join(".",methodOrFieldCall.call);
+        }
+        System.out.println(toPrint);
+    }
+
 
     @Override
     public void visit(MethodDeclaration methodDeclaration) {

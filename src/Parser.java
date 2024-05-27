@@ -7,6 +7,7 @@ import java.io.EOFException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 class Parser {
     private List<Token> tokens;
@@ -22,6 +23,9 @@ class Parser {
 
     private void advanceToken() {
         ++this.currentTokenIndex;
+    }
+    private void backToken(){
+        --this.currentTokenIndex;
     }
 
     public Program parse() {
@@ -58,12 +62,13 @@ class Parser {
                 case "if":
                     return this.parseIfStatement();
                 case "else":
-                    this.advanceToken();
-                    return this.parseStatement();
+                    throw new RuntimeException("Using else without if statement");
                 case "while":
                     return this.parseWhileLoopDeclaration();
                 case "class":
                     return this.parseClassDeclaration();
+                case ".":
+                    return parseDotDeclaration();
                 default:
                     throw new RuntimeException("Unexpected keyword: " + token.value);
             }
@@ -75,6 +80,56 @@ class Parser {
         }
     }
 
+    private ASTNode parseDotDeclaration(){
+        Token token = getCurrentToken();
+        String library = token.value;
+        advanceToken();
+        ArrayList<String> arr = new ArrayList<>();
+        arr.add(library);
+        advanceToken();
+        token = getCurrentToken();
+        while (!Objects.equals(token.value, ";")&&!token.value.equals("=")&&!token.value.equals("(")){
+
+            if (!token.value.equals(".")&&token.type!=TokenType.IDENTIFIER){
+                Token err = token;
+                backToken();
+                token = getCurrentToken();
+                if (token.value.equals("."))
+                    throw new RuntimeException("Expected field or method but found "+err);
+                else
+                    throw new RuntimeException("Expected . but found "+err);
+
+            }
+            if (token.type == TokenType.IDENTIFIER)
+                arr.add(token.value);
+            advanceToken();
+            token = getCurrentToken();
+
+
+        }
+        if (token.value.equals("(")){
+            ArrayList<String> body = new ArrayList<>();
+            advanceToken();
+            token = getCurrentToken();
+            while(!token.value.equals(")")){
+
+                if (token.type!=TokenType.IDENTIFIER&&!token.value.equals(",")){
+                    throw new RuntimeException("Expected ) but found "+token);
+                }
+                if (token.type==TokenType.IDENTIFIER){
+                    body.add(token.value);
+                }
+                advanceToken();
+                token = getCurrentToken();
+            }
+            advanceToken();
+            token = getCurrentToken();
+            if (token.value.equals(";"))
+                return new MethodOrFieldCall(true,arr,body);
+            else throw new RuntimeException("Expected ; but found "+token);
+        }
+        return new MethodOrFieldCall(false,arr,null);
+    }
     private ASTNode parsePublicDeclaration() {
         Token nextToken = this.getCurrentToken();
         if (nextToken != null && nextToken.value.equals("class"))
@@ -181,9 +236,17 @@ class Parser {
 //                        method.addBodyStatement();
                         }
                         else {
-                            ASTNode statement = this.parseStatement();
-                            if (statement != null) {
-                                method.addBodyStatement(statement);
+                            token = getCurrentToken();
+                            advanceToken();
+                            Token nextToken = getCurrentToken();
+                            this.backToken();
+                            if (token.value.equals(".")||nextToken.value.equals("."))
+                                method.addBodyStatement(parseDotDeclaration());
+                            else{
+                                ASTNode statement = this.parseStatement();
+                                if (statement != null) {
+                                    method.addBodyStatement(statement);
+                                }
                             }
                         }
                     }
@@ -261,7 +324,6 @@ class Parser {
                 if (this.getCurrentToken().value.equals("{")) {
                     ArrayList<ASTNode> body = new ArrayList<>();
                     body.add(this.parseBlockStatement());
-                    System.out.println();
                     return new WhileLoop(expr, body);
                 }
                 else{
@@ -456,8 +518,10 @@ class Parser {
         StringBuilder expr = new StringBuilder();
 
         while(this.getCurrentToken() != null && this.getCurrentToken().type != TokenType.SEPARATOR) {
+
             expr.append(this.getCurrentToken().value).append(" ");
             this.advanceToken();
+
         }
 
         return new Expression(expr.toString().trim());

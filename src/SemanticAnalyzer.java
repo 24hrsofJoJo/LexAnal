@@ -15,6 +15,11 @@ class SemanticAnalyzer implements ASTVisitor {
     }
 
     @Override
+    public void visit(MethodOrFieldCall methodOrFieldCall){
+
+    }
+
+    @Override
     public void visit(VariableDeclaration variableDeclaration) {
         if (variableTypes.containsKey(variableDeclaration.name)) {
             throw new RuntimeException("Variable " + variableDeclaration.name + " is already declared.");
